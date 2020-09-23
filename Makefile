@@ -10,10 +10,10 @@ RES_DIR := res
 SRC_DIR := src
 
 # the package name
-PACKAGE := com.gmail.negativefnnancy.helloandroid
+PACKAGE := cy.negativefnnan.helloandroid
 
 # the source directory
-SOURCE_DIR := $(SRC_DIR)/com/gmail/negativefnnancy/helloandroid
+SOURCE_DIR := $(SRC_DIR)/cy/negativefnnan/helloandroid
 
 # the platform jar for the desired android api level
 PLATFORM := /opt/android-sdk/platforms/android-21/android.jar

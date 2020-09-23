@@ -1,4 +1,4 @@
-package com.gmail.negativefnnancy.helloandroid;
+package cy.negativefnnan.helloandroid;
 
 import android.app.Activity;
 import android.os.Bundle;
