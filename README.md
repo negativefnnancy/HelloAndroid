@@ -1,3 +1,3 @@
 # Hello Android
 
-just a test app for android development!!
+My reference template for Android Development! ^_^
