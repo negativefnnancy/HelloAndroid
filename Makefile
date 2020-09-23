@@ -38,7 +38,7 @@ TARGET           := $(BIN_DIR)/$(NAME).apk
 SOURCES := $(SOURCE_DIR)/*.java
 R_FILE  := $(SOURCE_DIR)/R.java
 
-$(TARGET): $(TARGET_UNALIGNED)
+$(TARGET): $(TARGET_UNALIGNED) $(KEYSTORE)
 	zipalign -f 4 $(TARGET_UNALIGNED) $@
 	apksigner sign --ks $(KEYSTORE) $@
 
