@@ -63,14 +63,14 @@ TARGET_UNALIGNED := $(BIN_DIR)/$(NAME).unaligned.apk
 TARGET           := $(BIN_DIR)/$(NAME).apk
 
 # the source files
-SOURCES := $(SOURCE_DIR)/*.java
 R_FILE  := $(SOURCE_DIR)/R.java
+SOURCES := $(filter-out $(R_FILE),$(wildcard $(SOURCE_DIR)/*.java))
 
 $(TARGET): $(TARGET_UNALIGNED) $(KEYSTORE)
 	$(ZIPALIGN) -f 4 $(TARGET_UNALIGNED) $@
 	$(APKSIGNER) sign --ks $(KEYSTORE) $@
 
-$(TARGET_UNALIGNED): $(MANIFEST) $(PLATFORM) $(SOURCES) $(R_FILE) $(BIN_DIR) $(OBJ_DIR)
+$(TARGET_UNALIGNED): $(MANIFEST) $(PLATFORM) $(SOURCES) $(R_FILE) | $(BIN_DIR) $(OBJ_DIR)
 	$(JAVAC) -d $(OBJ_DIR) -classpath $(SRC_DIR) -bootclasspath $(PLATFORM) $(SOURCES) $(R_FILE)
 	$(DX) --dex --output $(DEX_FILE) $(OBJ_DIR)
 	$(AAPT) package -f -m -F $@ -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM)
@@ -94,9 +94,7 @@ test: $(TARGET)
 	$(ADB) shell am start -n $(PACKAGE)/$(ACTIVITY)
 
 clean:
-	rm -rf $(BIN_DIR) $(OBJ_DIR)
-
-.INTERMEDIATE: $(R_FILE)
+	rm -rf $(BIN_DIR) $(OBJ_DIR) $(R_FILE)
 
 .PHONY: test
 .PHONY: clean
