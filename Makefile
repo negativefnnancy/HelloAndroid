@@ -1,5 +1,3 @@
-# TODO: figure out why it's rebuilding every time....
-
 # the name of the build target (without extension)
 NAME := hello
 
