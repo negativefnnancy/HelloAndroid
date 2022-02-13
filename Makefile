@@ -12,6 +12,28 @@ NAMESPACE := io.github.negativefnnancy
 # the android api level to build with
 API_LEVEL := 29
 
+# the path to the root of the android SDK
+SDK_DIR := /opt/android-sdk
+
+# the path to the android build tools directory for same api level
+BUILD_TOOLS_DIR := $(SDK_DIR)/build-tools/29.0.3
+
+# the path to the keystore to sign with
+# by placing it in home directory you can reuse it across projects
+KEYSTORE := $(HOME)/.key.keystore
+
+# the main activity
+ACTIVITY := .MainActivity
+
+# commands to invoke binaries
+JAVAC     := javac
+KEYTOOL   := keytool
+ADB       := adb
+ZIPALIGN  := $(BUILD_TOOLS_DIR)/zipalign
+APKSIGNER := $(BUILD_TOOLS_DIR)/apksigner
+DX        := $(BUILD_TOOLS_DIR)/dx
+AAPT      := $(BUILD_TOOLS_DIR)/aapt
+
 # relevant directories
 OBJ_DIR := obj
 BIN_DIR := bin
@@ -28,13 +50,7 @@ PACKAGE_DIR := $(subst .,/,$(PACKAGE))
 SOURCE_DIR := $(SRC_DIR)/$(PACKAGE_DIR)
 
 # the platform jar for the desired android api level
-PLATFORM := /opt/android-sdk/platforms/android-$(API_LEVEL)/android.jar
-
-# the main activity
-ACTIVITY := .MainActivity
-
-# the keystore to sign with
-KEYSTORE := $(HOME)/.key.keystore
+PLATFORM := $(SDK_DIR)/platforms/android-$(API_LEVEL)/android.jar
 
 # the manifest file
 MANIFEST := AndroidManifest.xml
@@ -51,18 +67,18 @@ SOURCES := $(SOURCE_DIR)/*.java
 R_FILE  := $(SOURCE_DIR)/R.java
 
 $(TARGET): $(TARGET_UNALIGNED) $(KEYSTORE)
-	zipalign -f 4 $(TARGET_UNALIGNED) $@
-	apksigner sign --ks $(KEYSTORE) $@
+	$(ZIPALIGN) -f 4 $(TARGET_UNALIGNED) $@
+	$(APKSIGNER) sign --ks $(KEYSTORE) $@
 
 $(TARGET_UNALIGNED): $(MANIFEST) $(PLATFORM) $(SOURCES) $(R_FILE) $(BIN_DIR) $(OBJ_DIR)
-	javac -d $(OBJ_DIR) -classpath $(SRC_DIR) -bootclasspath $(PLATFORM) $(SOURCES) $(R_FILE)
-	dx --dex --output $(DEX_FILE) $(OBJ_DIR)
-	aapt package -f -m -F $@ -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM)
-	aapt add $@ $(DEX_FILE)
+	$(JAVAC) -d $(OBJ_DIR) -classpath $(SRC_DIR) -bootclasspath $(PLATFORM) $(SOURCES) $(R_FILE)
+	$(DX) --dex --output $(DEX_FILE) $(OBJ_DIR)
+	$(AAPT) package -f -m -F $@ -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM)
+	$(AAPT) add $@ $(DEX_FILE)
 	mv $(DEX_FILE) $(BIN_DIR)
 
 $(R_FILE): $(MANIFEST) $(SOURCES)
-	aapt package -f -m -J $(SRC_DIR) -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM)
+	$(AAPT) package -f -m -J $(SRC_DIR) -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM)
 
 $(BIN_DIR):
 	mkdir $@
@@ -71,11 +87,11 @@ $(OBJ_DIR):
 	mkdir $@
 
 $(KEYSTORE):
-	keytool -genkeypair -validity 365 -keystore $@ -keyalg RSA -keysize 2048
+	$(KEYTOOL) -genkeypair -validity 365 -keystore $@ -keyalg RSA -keysize 2048
 
 test: $(TARGET)
-	adb install -r $(TARGET)
-	adb shell am start -n $(PACKAGE)/$(ACTIVITY)
+	$(ADB) install -r $(TARGET)
+	$(ADB) shell am start -n $(PACKAGE)/$(ACTIVITY)
 
 clean:
 	rm -rf $(BIN_DIR) $(OBJ_DIR)
