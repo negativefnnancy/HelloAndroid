@@ -3,6 +3,15 @@
 # the name of the build target (without extension)
 NAME := hello
 
+# the name of the java subpackage for this project
+PACKAGE_NAME := helloandroid
+
+# the parent organizational namespace
+NAMESPACE := io.github.negativefnnancy
+
+# the android api level to build with
+API_LEVEL := 29
+
 # relevant directories
 OBJ_DIR := obj
 BIN_DIR := bin
@@ -10,19 +19,22 @@ RES_DIR := res
 SRC_DIR := src
 
 # the package name
-PACKAGE := cy.negativefnnan.helloandroid
+PACKAGE := $(NAMESPACE).$(PACKAGE_NAME)
+
+# the package name as a filesystem path
+PACKAGE_DIR := $(subst .,/,$(PACKAGE))
 
 # the source directory
-SOURCE_DIR := $(SRC_DIR)/cy/negativefnnan/helloandroid
+SOURCE_DIR := $(SRC_DIR)/$(PACKAGE_DIR)
 
 # the platform jar for the desired android api level
-PLATFORM := /opt/android-sdk/platforms/android-21/android.jar
+PLATFORM := /opt/android-sdk/platforms/android-$(API_LEVEL)/android.jar
 
 # the main activity
 ACTIVITY := .MainActivity
 
 # the keystore to sign with
-KEYSTORE := key.keystore
+KEYSTORE := $(HOME)/.key.keystore
 
 # the manifest file
 MANIFEST := AndroidManifest.xml

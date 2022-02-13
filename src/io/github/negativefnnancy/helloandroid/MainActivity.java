@@ -1,4 +1,4 @@
-package cy.negativefnnan.helloandroid;
+package io.github.negativefnnancy.helloandroid;
 
 import android.app.Activity;
 import android.os.Bundle;
