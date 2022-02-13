@@ -96,5 +96,7 @@ test: $(TARGET)
 clean:
 	rm -rf $(BIN_DIR) $(OBJ_DIR) $(R_FILE)
 
+.INTERMEDIATE: $(R_FILE)
+
 .PHONY: test
 .PHONY: clean
