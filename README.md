@@ -21,7 +21,7 @@ To build, just run `make`. If you haven't generated a keystore, it'll prompt you
 
 ## Run
 
-To run the build on a connected Android device, make sure your device is connected and recognized with developer mode enabled by running ```adb devices``` and see if it shows up on the list. And then just run `make test`.
+To run the build on a connected Android device, make sure your device is connected and recognized with developer mode enabled by running ```adb devices``` and see if it shows up on the list. And then just run `make run`.
 
 ## Debug
 

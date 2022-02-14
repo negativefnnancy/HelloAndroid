@@ -88,7 +88,7 @@ $(OBJ_DIR):
 $(KEYSTORE):
 	$(KEYTOOL) -genkeypair -validity 365 -keystore $@ -keyalg RSA -keysize 2048
 
-test: $(TARGET)
+run: $(TARGET)
 	$(ADB) install -r $(TARGET)
 	$(ADB) shell am start -n $(PACKAGE)/$(ACTIVITY)
 
@@ -97,5 +97,5 @@ clean:
 
 .INTERMEDIATE: $(R_FILE)
 
-.PHONY: test
+.PHONY: run
 .PHONY: clean
