@@ -61,21 +61,22 @@ TARGET_UNALIGNED := $(BIN_DIR)/$(NAME).unaligned.apk
 TARGET           := $(BIN_DIR)/$(NAME).apk
 
 # the source files
-R_FILE  := $(SOURCE_DIR)/R.java
-SOURCES := $(filter-out $(R_FILE),$(wildcard $(SOURCE_DIR)/*.java))
+R_FILE    := $(SOURCE_DIR)/R.java
+SOURCES   := $(filter-out $(R_FILE),$(wildcard $(SOURCE_DIR)/*.java))
+RESOURCES := $(wildcard $(RES_DIR)/*)
 
 $(TARGET): $(TARGET_UNALIGNED) $(KEYSTORE)
 	$(ZIPALIGN) -f 4 $(TARGET_UNALIGNED) $@
 	$(APKSIGNER) sign --ks $(KEYSTORE) $@
 
-$(TARGET_UNALIGNED): $(MANIFEST) $(PLATFORM) $(SOURCES) $(R_FILE) | $(BIN_DIR) $(OBJ_DIR)
+$(TARGET_UNALIGNED): $(MANIFEST) $(PLATFORM) $(SOURCES) $(RESOURCES) $(R_FILE) | $(BIN_DIR) $(OBJ_DIR)
 	$(JAVAC) -d $(OBJ_DIR) -classpath $(SRC_DIR) -bootclasspath $(PLATFORM) $(SOURCES) $(R_FILE)
 	$(DX) --dex --output $(DEX_FILE) $(OBJ_DIR)
 	$(AAPT) package -f -m -F $@ -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM)
 	$(AAPT) add $@ $(DEX_FILE)
 	mv $(DEX_FILE) $(BIN_DIR)
 
-$(R_FILE): $(MANIFEST) $(SOURCES)
+$(R_FILE): $(MANIFEST) $(SOURCES) $(RESOURCES)
 	$(AAPT) package -f -m -J $(SRC_DIR) -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM)
 
 $(BIN_DIR):
