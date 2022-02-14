@@ -19,4 +19,10 @@ Edit `Makefile` as much as you need for your particular project and build setup.
 
 To build, just run `make`. If you haven't generated a keystore, it'll prompt you to create one, and then you won't have to create it again for subsequent builds, but it will prompt you to sign each new build.
 
+## Run
+
 To run the build on a connected Android device, make sure your device is connected and recognized with developer mode enabled by running ```adb devices``` and see if it shows up on the list. And then just run `make test`.
+
+## Debug
+
+Once it's running, debug the app using ```adb logcat```. [Filter](https://developer.android.com/studio/command-line/logcat#filteringOutput) for relevant messages, for example, like this: ```adb logcat HelloAndroid *:S```
