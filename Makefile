@@ -1,11 +1,14 @@
 # the name of the build target (without extension)
 NAME := hello
 
-# the name of the java subpackage for this project
+# the package name
 PACKAGE_NAME := helloandroid
 
 # the parent organizational namespace
 NAMESPACE := io.github.negativefnnancy
+
+# the full package name
+PACKAGE := $(NAMESPACE).$(PACKAGE_NAME)
 
 # the android api level to build with
 API_LEVEL := 30
@@ -14,41 +17,49 @@ API_LEVEL := 30
 SDK_DIR := $(HOME)/Android/Sdk
 
 # the path to the android build tools directory for same api level
-BUILD_TOOLS_DIR := $(SDK_DIR)/build-tools/33.0.1
+BUILD_TOOLS_DIR := $(lastword $(wildcard $(SDK_DIR)/build-tools/*))
+
+# the path to the root of the NDK
+NDK_DIR := $(lastword $(wildcard $(SDK_DIR)/ndk/*))
+
+# the path to the toolchain directory of the NDK
+NDK_TOOLCHAIN_DIR := $(NDK_DIR)/toolchains/llvm/prebuilt/linux-x86_64
 
 # the path to the keystore to sign with
 # by placing it in home directory you can reuse it across projects
 KEYSTORE := $(HOME)/.key.keystore
 
-# the main activity
-ACTIVITY := .MainActivity
+# the launchable activity
+ACTIVITY := android.app.NativeActivity
 
 # commands to invoke binaries
-JAVAC     := javac
+CC_ARM64  := $(NDK_TOOLCHAIN_DIR)/bin/aarch64-linux-android$(API_LEVEL)-clang
+CC_ARM32  := $(NDK_TOOLCHAIN_DIR)/bin/armv7a-linux-androideabi$(API_LEVEL)-clang
 KEYTOOL   := keytool
 ADB       := adb
 ZIPALIGN  := $(BUILD_TOOLS_DIR)/zipalign
 APKSIGNER := $(BUILD_TOOLS_DIR)/apksigner
-DX        := $(BUILD_TOOLS_DIR)/d8
 AAPT      := $(BUILD_TOOLS_DIR)/aapt
 
 # relevant directories
-OBJ_DIR := obj
 BIN_DIR := bin
+LIB_DIR := lib
 RES_DIR := res
 SRC_DIR := src
+INC_DIR := inc
+OBJ_DIR := obj
 
-# the package name
-PACKAGE := $(NAMESPACE).$(PACKAGE_NAME)
+# compiler options
+CFLAGS       := -I$(INC) -I$(NDK_DIR)/sysroot/usr/include -I$(NDK_DIR)/sysroot/usr/include/android -I$(NDK_TOOLCHAIN_DIR)/sysroot/usr/include/android -fPIC -DANDROIDVERSION=$(API_LEVEL)
+CFLAGS_ARM64 := -m64
+CFLAGS_ARM32 := -mfloat-abi=softfp -m32
+LDFLAGS      := -lm -lGLESv3 -LEGL -landroid -llog -shared -uANativeActivity_onCreate
 
-# the package name as a filesystem path
-PACKAGE_DIR := $(subst .,/,$(PACKAGE))
-
-# the source directory
-SOURCE_DIR := $(SRC_DIR)/$(PACKAGE_DIR)
-
-# the object directory
-OBJECT_DIR := $(OBJ_DIR)/$(PACKAGE_DIR)
+# platform specific directories
+ARM64_DIR := arm64-v8a
+ARM32_DIR := armeabi-v7a
+OBJ_ARM64_DIR := $(OBJ_DIR)/$(ARM64_DIR)
+OBJ_ARM32_DIR := $(OBJ_DIR)/$(ARM32_DIR)
 
 # the platform jar for the desired android api level
 PLATFORM := $(SDK_DIR)/platforms/android-$(API_LEVEL)/android.jar
@@ -56,50 +67,70 @@ PLATFORM := $(SDK_DIR)/platforms/android-$(API_LEVEL)/android.jar
 # the manifest file
 MANIFEST := AndroidManifest.xml
 
-# the dex file
-DEX_FILE := classes.dex
-
 # the target paths
 TARGET_UNALIGNED := $(BIN_DIR)/$(NAME).unaligned.apk
 TARGET           := $(BIN_DIR)/$(NAME).apk
+TARGET_ARM64     := $(LIB_DIR)/$(ARM64_DIR)/lib$(NAME).so
+TARGET_ARM32     := $(LIB_DIR)/$(ARM32_DIR)/lib$(NAME).so
 
 # the source files
-R_FILE    := $(SOURCE_DIR)/R.java
-INPUTS    := $(wildcard $(SOURCE_DIR)/*.java)
-SOURCES   := $(filter-out $(R_FILE),$(INPUTS))
+SOURCES   := $(wildcard $(SRC_DIR)/*.c)
 RESOURCES := $(wildcard $(RES_DIR)/*)
 
+# the object files
+OBJECTS_ARM64 := $(patsubst $(SRC_DIR)/%.c,$(OBJ_ARM64_DIR)/%.o,$(SOURCES))
+OBJECTS_ARM32 := $(patsubst $(SRC_DIR)/%.c,$(OBJ_ARM32_DIR)/%.o,$(SOURCES))
+
 $(TARGET): $(TARGET_UNALIGNED) $(KEYSTORE)
-	$(ZIPALIGN) -f 4 $(TARGET_UNALIGNED) $@
+	$(ZIPALIGN) -v -f 4 $(TARGET_UNALIGNED) $@
 	$(APKSIGNER) sign --ks $(KEYSTORE) $@
 
-$(TARGET_UNALIGNED): $(MANIFEST) $(PLATFORM) $(SOURCES) $(RESOURCES) $(R_FILE) | $(BIN_DIR) $(OBJ_DIR)
-	$(JAVAC) -d $(OBJ_DIR) -classpath $(SRC_DIR):$(PLATFORM) $(SOURCES) $(R_FILE)
-	$(DX) $(OBJECT_DIR)/*.class
-	$(AAPT) package -f -m -F $@ -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM)
-	$(AAPT) add $@ $(DEX_FILE)
-	mv $(DEX_FILE) $(BIN_DIR)
+$(TARGET_UNALIGNED): $(TARGET_ARM64) $(TARGET_ARM32) $(MANIFEST) $(PLATFORM) $(RESOURCES) | $(BIN_DIR) $(LIB_DIR)
+	$(AAPT) package -f -m -F $@ -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM) -v --target-sdk-version $(API_LEVEL)
+	$(AAPT) add $@ $(TARGET_ARM64) $(TARGET_ARM32)
 
-$(R_FILE): $(MANIFEST) $(SOURCES) $(RESOURCES)
-	$(AAPT) package -f -m -J $(SRC_DIR) -M $(MANIFEST) -S $(RES_DIR) -I $(PLATFORM)
+$(TARGET_ARM64): $(OBJECTS_ARM64) | $(LIB_DIR) $(OBJ_ARM64_DIR)
+	mkdir -p $(@D)
+	$(CC_ARM64) $(CFLAGS) $(CFLAGS_ARM64) $(LDFLAGS) -o $@ $^
+
+$(TARGET_ARM32): $(OBJECTS_ARM32) | $(LIB_DIR) $(OBJ_ARM32_DIR)
+	mkdir -p $(@D)
+	$(CC_ARM32) $(CFLAGS) $(CFLAGS_ARM32) $(LDFLAGS) -o $@ $^
+
+$(OBJ_ARM64_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_ARM64_DIR)
+	$(CC_ARM64) $(CFLAGS) $(CFLAGS_ARM64) -o $@ -c $<
+
+$(OBJ_ARM32_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_ARM32_DIR)
+	$(CC_ARM32) $(CFLAGS) $(CFLAGS_ARM32) -o $@ -c $<
 
 $(BIN_DIR):
-	mkdir $@
+	mkdir -p $@
 
-$(OBJ_DIR):
-	mkdir $@
+$(LIB_DIR):
+	mkdir -p $@
+
+$(OBJ_ARM64_DIR):
+	mkdir -p $@
+
+$(OBJ_ARM32_DIR):
+	mkdir -p $@
 
 $(KEYSTORE):
 	$(KEYTOOL) -genkeypair -validity 365 -keystore $@ -keyalg RSA -keysize 2048
 
-run: $(TARGET)
+push: $(TARGET)
 	$(ADB) install -r $(TARGET)
+
+run: push
 	$(ADB) shell am start -n $(PACKAGE)/$(ACTIVITY)
 
+debug: run
+	$(ADB) logcat | grep $(PACKAGE)
+
 clean:
-	rm -rf $(BIN_DIR) $(OBJ_DIR) $(R_FILE)
+	rm -rf $(BIN_DIR) $(OBJ_DIR) $(TARGET_ARM64) $(TARGET_ARM32)
 
-.INTERMEDIATE: $(R_FILE)
-
+.PHONY: push
 .PHONY: run
+.PHONY: debug
 .PHONY: clean

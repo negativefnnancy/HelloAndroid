@@ -2,7 +2,4 @@
 <resources>
     <string name="app_name">Hello Android</string>
     <string name="app_description">This is an example app.</string>
-    <string name="welcome_text">Press the button!</string>
-    <string name="button_text">Press me!</string>
-    <string name="hello_text">Hello World!</string>
 </resources>
